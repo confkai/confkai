@@ -1,12 +1,14 @@
 package confkai_test
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	. "github.com/confkai/confkai/confkai"
 )
 
-func TestStructConfig(t *testing.T) {
+func TestStructConfig1(t *testing.T) {
 
 	type TestType struct {
 		Foo string
@@ -54,4 +56,67 @@ func TestStructConfig(t *testing.T) {
 	ShouldPanic(t, func() { conf.Dfail() })
 	ShouldPanic(t, func() { conf.Efail() })
 	ShouldPanic(t, func() { conf.Ffail() })
+}
+
+func TestStructConfig2(t *testing.T) {
+
+	type MyConfig struct {
+		Environment       func() string
+		DatabaseName      func() string
+		SlowMessage       func() string
+		SlowMessageCached func() string
+	}
+
+	environment := "environment"
+
+	os.Setenv("my_env", "staging")
+	var config = MyConfig{
+		Environment: RegisterTag(environment, Value(os.Getenv("my_env"))).Must(),
+		DatabaseName: FirstOf(
+			Tag(environment, "dev", Value("my_dev_db")),
+			Tag(environment, "staging", Value("my_staging_db")),
+			Tag(environment, "prod", Value("my_prod_db")),
+		).Must(),
+		SlowMessage: FuncValue(func() (string, error) {
+			time.Sleep(time.Second)
+			return "hello world", nil
+		}).Must(),
+		SlowMessageCached: Cached(FuncValue(func() (string, error) {
+			time.Sleep(time.Second)
+			return "hello universe", nil
+		})).Must(),
+	}
+
+	if config.Environment() != "staging" {
+		t.Error("Environment should equal staging")
+	}
+
+	if config.DatabaseName() != "my_staging_db" {
+		t.Error("Environment should equal my_staging_db")
+	}
+
+	start := time.Now()
+	if config.SlowMessage() != "hello world" {
+		t.Errorf("message should equal 'hello world'")
+	}
+	if time.Since(start) < time.Second {
+		t.Errorf("SlowMessage() should have blocked for at least 1 second")
+	}
+
+	start = time.Now()
+	if config.SlowMessageCached() != "hello universe" {
+		t.Errorf("message should equal 'hello universe'")
+	}
+	if time.Since(start) < time.Second {
+		t.Errorf("SlowMessageCached() should have blocked for at least 1 second")
+	}
+
+	start = time.Now()
+	if config.SlowMessageCached() != "hello universe" {
+		t.Errorf("message should equal 'hello universe'")
+	}
+	if time.Since(start) > time.Millisecond {
+		t.Errorf("SlowMessageCached() should not have blocked")
+	}
+
 }

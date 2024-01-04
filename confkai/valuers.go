@@ -12,7 +12,12 @@ import (
 // With this base interface, we can wrap and compose different
 // kinds of values.
 type Valuer[T any] interface {
+	// Value executes and returns the value, or an error
+	// if one occurs.
 	Value() (T, error)
+	// Must returns a function that only returns
+	// the value or panics if the underlying error from
+	// Value() is not nil
 	Must() func() T
 }
 
@@ -41,7 +46,8 @@ func (f ValuerFunc[T]) Must() func() T {
 	}
 }
 
-func FuncValue[T any](fn func() (T, error)) ValuerFunc[T] {
+// FuncValue turns a function into a ValuerFunc, which implements Valuer
+func FuncValue[T any](fn func() (T, error)) Valuer[T] {
 	return ValuerFunc[T](fn)
 }
 
@@ -95,7 +101,7 @@ func Cached[T any](value Valuer[T]) Valuer[T] {
 		if err != nil {
 			return castedVal, err
 		}
-		cachedMap.Store(hashable, val)
+		cachedMap.Store(hashable, castedVal)
 		return castedVal, nil
 	})
 }
@@ -112,5 +118,37 @@ func Eager[T any](value Valuer[T]) Valuer[T] {
 	val, err := value.Value()
 	return ValuerFunc[T](func() (T, error) {
 		return val, err
+	})
+}
+
+var tagMap = sync.Map{}
+
+// Register tag eagerly loads value and save it for use with
+// the Valuer 'Tagged'. It only accepts string valuers.
+func RegisterTag(tag string, value Valuer[string]) Valuer[string] {
+	val, err := value.Value() //eagerly load the value
+	if err != nil {
+		panic(err)
+	}
+	tagMap.Store(tag, val) //store it
+	return ValuerFunc[string](func() (string, error) {
+		return value.Value()
+	})
+}
+
+// Tag returns a valuer who will return an error if the
+// the passed tag for key is not set, or the value set for the tag
+// does not equal val.
+func Tag[T any](key, val string, value Valuer[T]) Valuer[T] {
+	return ValuerFunc[T](func() (T, error) {
+		var emptyVal T
+		tagValue, ok := tagMap.Load(key)
+		if !ok {
+			return emptyVal, fmt.Errorf("value for tag '%s' is not set", key)
+		}
+		if tagValue != val {
+			return emptyVal, fmt.Errorf("%s is '%s', not '%s'", key, tagValue, val)
+		}
+		return value.Value()
 	})
 }
