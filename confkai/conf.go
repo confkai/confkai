@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 // Valuer is the base interface for any configuration type.
@@ -67,4 +68,27 @@ func TypeOf[T any](v Valuer) T {
 		panic(fmt.Sprintf("%v is not a %s", val, reflect.TypeOf(t).String()))
 	}
 	return t
+}
+
+// thread safe cache storing
+var cachedMap = sync.Map{}
+
+// Cached is a simple thread-safe caching mechanism to wrap values with. The
+// child value will only be called once if successful. That value wil
+// be stored and returned for any subsequent calls.
+func Cached(value Valuer) Valuer {
+	return ValuerFunc(func() (any, error) {
+		val, ok := cachedMap.Load(value)
+		if ok {
+			// Cache hit
+			return val, nil
+		}
+		// Cache miss
+		val, err := value.Value()
+		if err != nil {
+			return nil, err
+		}
+		cachedMap.Store(value, val)
+		return val, nil
+	})
 }
