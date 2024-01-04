@@ -38,16 +38,15 @@ var config = MyConfig{
 }
 
 func main() {
-
 	log.Println(config.Environment())
-	// 2024/01/03 20:18:19 staging
 	log.Println(config.DatabaseName())
-	// 2024/01/03 20:18:19 my_staging_db
 	log.Println(config.SlowMessage())
-	// 2024/01/03 20:18:22 hello world
 	log.Println(config.SlowMessageCached())
-	// 2024/01/03 20:18:25 hello universe
 	log.Println(config.SlowMessageCached())
-	// 2024/01/03 20:18:25 hello universe
-
 }
+
+// output: 2024/01/03 20:18:19 staging
+// output: 2024/01/03 20:18:19 my_staging_db
+// output: 2024/01/03 20:18:22 hello world
+// output: 2024/01/03 20:18:25 hello universe
+// output: 2024/01/03 20:18:25 hello universe
