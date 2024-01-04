@@ -3,6 +3,8 @@ package confkai_test
 import (
 	"fmt"
 	"testing"
+
+	"github.com/confkai/confkai/confkai"
 )
 
 func ShouldPanic(t *testing.T, fn func()) (err error) {
@@ -24,4 +26,14 @@ func ShouldNotPanic(t *testing.T, fn func()) (err error) {
 	}()
 	fn()
 	return nil
+}
+
+func pointerOf[T any](o T) *T {
+	return &o
+}
+
+func failuerValue[T any](val T) confkai.Valuer[T] {
+	return confkai.FuncValue(func() (t T, err error) {
+		return t, fmt.Errorf("failed value")
+	})
 }

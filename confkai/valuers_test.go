@@ -10,7 +10,7 @@ import (
 
 func TestValuerFunc(t *testing.T) {
 
-	result, err := confkai.ValuerFunc(func() (any, error) {
+	result, err := confkai.FuncValue(func() (string, error) {
 		return "test", nil
 	}).Value()
 	if result != "test" {
@@ -20,7 +20,7 @@ func TestValuerFunc(t *testing.T) {
 		t.Error("err should be nil")
 	}
 
-	_, err = confkai.ValuerFunc(func() (any, error) {
+	_, err = confkai.FuncValue(func() (string, error) {
 		return "", fmt.Errorf("an error occurred")
 	}).Value()
 	if err == nil {
@@ -41,8 +41,8 @@ func TestValue(t *testing.T) {
 
 func TestFirstOf(t *testing.T) {
 	// When the first element errors
-	result, err := confkai.FirstOf(
-		confkai.ValuerFunc(func() (any, error) {
+	result, err := confkai.FirstOf[string](
+		confkai.FuncValue(func() (string, error) {
 			return "", fmt.Errorf("test value error")
 		}),
 		confkai.Value("hello world"),
@@ -55,9 +55,9 @@ func TestFirstOf(t *testing.T) {
 	}
 
 	// when the second element errors
-	result, err = confkai.FirstOf(
+	result, err = confkai.FirstOf[string](
 		confkai.Value("hello world"),
-		confkai.ValuerFunc(func() (any, error) {
+		confkai.FuncValue(func() (string, error) {
 			return "", fmt.Errorf("test value error")
 		}),
 	).Value()
@@ -69,11 +69,11 @@ func TestFirstOf(t *testing.T) {
 	}
 
 	// when all elements error
-	_, err = confkai.FirstOf(
-		confkai.ValuerFunc(func() (any, error) {
+	_, err = confkai.FirstOf[string](
+		confkai.FuncValue(func() (string, error) {
 			return "", fmt.Errorf("test value error")
 		}),
-		confkai.ValuerFunc(func() (any, error) {
+		confkai.FuncValue(func() (string, error) {
 			return "", fmt.Errorf("test value error")
 		}),
 	).Value()
@@ -85,13 +85,13 @@ func TestFirstOf(t *testing.T) {
 
 func TestCached(t *testing.T) {
 	delay := time.Duration(3 * time.Second)
-	aLongRunningValue := confkai.ValuerFunc(func() (any, error) {
+	aLongRunningValue := confkai.FuncValue(func() (string, error) {
 		time.Sleep(delay)
 		return "hello world", nil
 	})
 
 	start := time.Now()
-	result, err := confkai.Cached(aLongRunningValue).Value()
+	result, err := confkai.Cached[string](aLongRunningValue).Value()
 	if err != nil {
 		t.Errorf("err should be nil: %s", err)
 	}
@@ -103,7 +103,7 @@ func TestCached(t *testing.T) {
 	}
 	// test running again, it should be cached now
 	start = time.Now()
-	result, err = confkai.Cached(aLongRunningValue).Value()
+	result, err = confkai.Cached[string](aLongRunningValue).Value()
 	if err != nil {
 		t.Errorf("err should be nil: %s", err)
 	}
@@ -118,7 +118,7 @@ func TestCached(t *testing.T) {
 func TestEager(t *testing.T) {
 
 	delay := time.Duration(3 * time.Second)
-	aLongRunningValuer := confkai.ValuerFunc(func() (any, error) {
+	aLongRunningValuer := confkai.FuncValue(func() (string, error) {
 		time.Sleep(delay)
 		return "hello world", nil
 	})
@@ -126,7 +126,7 @@ func TestEager(t *testing.T) {
 	start := time.Now()
 	// since this is eager loading it should basically block for the
 	// time that valuer takes to evaluate.
-	myEagerConf := confkai.Eager(aLongRunningValuer)
+	myEagerConf := confkai.Eager[string](aLongRunningValuer)
 	if time.Since(start) < delay {
 		t.Error("Eager did not block as expected")
 	}
