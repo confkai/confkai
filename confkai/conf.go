@@ -3,7 +3,6 @@ package confkai
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 )
 
@@ -51,23 +50,6 @@ func FirstOf(vals ...Valuer) Valuer {
 		}
 		return nil, fmt.Errorf("no valuers in FirstOf returned a value, %w", errors.Join(errs...))
 	})
-}
-
-// TypeOf asserts that the returned value is of the given type
-// and panics if either the valuer returns an error, or if the
-// type can not be asserted
-func TypeOf[T any](v Valuer) T {
-	val, err := v.Value()
-	if err != nil {
-		panic(err)
-	}
-
-	var t T
-	t, ok := val.(T)
-	if !ok {
-		panic(fmt.Sprintf("%v is not a %s", val, reflect.TypeOf(t).String()))
-	}
-	return t
 }
 
 // thread safe cache storing
