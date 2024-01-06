@@ -18,7 +18,7 @@ type Valuer[T any] interface {
 	// Must returns a function that only returns
 	// the value or panics if the underlying error from
 	// Value() is not nil
-	Must() func() T
+	Must() T
 }
 
 // ValuerFunc is a function that implements
@@ -36,14 +36,12 @@ func (f ValuerFunc[T]) Value() (T, error) {
 	return f()
 }
 
-func (f ValuerFunc[T]) Must() func() T {
-	return func() T {
-		val, err := f()
-		if err != nil {
-			panic(err)
-		}
-		return val
+func (f ValuerFunc[T]) Must() T {
+	val, err := f()
+	if err != nil {
+		panic(err)
 	}
+	return val
 }
 
 // FuncValue turns a function into a ValuerFunc, which implements Valuer

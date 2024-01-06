@@ -9,10 +9,10 @@ import (
 )
 
 type MyConfig struct {
-	Environment       func() string
-	DatabaseName      func() string
-	SlowMessage       func() string
-	SlowMessageCached func() string
+	Environment       Valuer[string]
+	DatabaseName      Valuer[string]
+	SlowMessage       Valuer[string]
+	SlowMessageCached Valuer[string]
 }
 
 var (
@@ -21,28 +21,28 @@ var (
 )
 
 var config = MyConfig{
-	Environment: RegisterTag(environment, Value(os.Getenv("my_env"))).Must(),
+	Environment: RegisterTag(environment, Value(os.Getenv("my_env"))),
 	DatabaseName: FirstOf(
 		Tag(environment, "dev", Value("my_dev_db")),
 		Tag(environment, "staging", Value("my_staging_db")),
 		Tag(environment, "prod", Value("my_prod_db")),
-	).Must(),
+	),
 	SlowMessage: FuncValue(func() (string, error) {
 		time.Sleep(3 * time.Second)
 		return "hello world", nil
-	}).Must(),
+	}),
 	SlowMessageCached: Cached(FuncValue(func() (string, error) {
 		time.Sleep(3 * time.Second)
 		return "hello universe", nil
-	})).Must(),
+	})),
 }
 
 func main() {
-	log.Println(config.Environment())
-	log.Println(config.DatabaseName())
-	log.Println(config.SlowMessage())
-	log.Println(config.SlowMessageCached())
-	log.Println(config.SlowMessageCached())
+	log.Println(config.Environment.Must())
+	log.Println(config.DatabaseName.Must())
+	log.Println(config.SlowMessage.Must())
+	log.Println(config.SlowMessageCached.Must())
+	log.Println(config.SlowMessageCached.Must())
 }
 
 // output: 2024/01/03 20:18:19 staging
